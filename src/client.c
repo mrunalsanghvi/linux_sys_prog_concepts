@@ -38,7 +38,6 @@ int main(int argc, char *argv[])
 		}
 	}
 	struct sockaddr_in addr_s;
-	struct sockaddr caddr_s;
 	int cfd;	
 	cfd=socket(AF_INET, SOCK_STREAM, 0);
 	if(cfd < 0)	
@@ -53,7 +52,6 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	socklen_t addrlen=0;
 	addr_s.sin_family=PF_INET;
 	addr_s.sin_port=htons(port_no);
 	addr_s.sin_addr.s_addr=inet_addr(ip);
