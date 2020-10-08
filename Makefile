@@ -7,7 +7,7 @@ vpath %.h include
 
 
 GCC_SANITIZE_FLAGS?=-fsanitize=address -fsanitize=leak
-#LIB_FLAGS?=-lpthread -lssl
+LIB_FLAGS?=-lpthread 
 DBG_FLAGS?=-fno-omit-frame-pointer -Wall  -Werror 
 
 #OBJ_TARGET=$(addprefix $(OBJDIR)/,OBJS)
@@ -25,8 +25,8 @@ build/build:
 .PRECIOUS: %.c $(OBJDIR)/%.o
 
 $(BINDIR)/%: $(OBJDIR)/%.o 
-	cc -g $(GCC_SANITIZE_FLAGS)  $(DBG_FLAGS) -o $@ $^
+	cc -g $(GCC_SANITIZE_FLAGS) $(LIB_FLAGS) $(DBG_FLAGS) -o $@ $^
 
 $(OBJDIR)/%.o: %.c
-	cc -g -MMD -c -o $@ $< $(GCC_SANITIZE_FLAGS) $(LIB_FLAGS) $(DBG_FLAGS)
+	cc -g -MMD -c -o $@ $< $(GCC_SANITIZE_FLAGS) $(DBG_FLAGS)
 -include $(OBJDIR)/*.d

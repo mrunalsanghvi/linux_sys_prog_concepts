@@ -80,9 +80,9 @@ int main(int argc, char *argv[])
 				perror("send");
 				exit(EXIT_FAILURE);
 			}
-			printf("received:%s\n",buf);	
+	//		printf("received:%s\n",buf);	
 	}
-	while(1);
+	//while(1);
 	close(cfd);
 exit(EXIT_SUCCESS);	
 }
