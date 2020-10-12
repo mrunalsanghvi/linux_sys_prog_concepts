@@ -1,22 +1,11 @@
-#include<sys/socket.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<pthread.h>
-#include<string.h>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include<sys/epoll.h>
-#include <arpa/inet.h>
-#include <getopt.h>
-#include<stdbool.h>
-#include<errno.h>
+#include"types.h"
 #define IP_ADDR 1
 #define PORT_NO 2
 #define MAX_EVENTS 100
-#define MAX_THREAD 10
+#define MAX_THREAD 50
 pthread_mutex_t mutex;
+pthread_cond_t condition=PTHREAD_COND_INITIALIZER;
+
 int pollfd;
 typedef struct msgbuf{
 	
@@ -56,11 +45,15 @@ void *request_handler(void*args)
 	printf("mqid:%d\n",mqid);
 	while(1)
 	{
-		while(pthread_mutex_trylock(&mutex)==0);
-		
-		if(msgrcv(mqid,&msg,sizeof(msg),0,IPC_NOWAIT)<0)
-		continue;
-		
+		//while(pthread_mutex_trylock(&mutex)==0);
+		pthread_mutex_lock(&mutex);
+		if((msgrcv(mqid,&msg,sizeof(msg),0,IPC_NOWAIT)<0)&&(errno==ENOMSG))
+		{
+			//printf("nomessage on queue\n");
+			//continue;
+			pthread_cond_wait(&condition,&mutex);
+			msgrcv(mqid,&msg,sizeof(msg),0,IPC_NOWAIT);
+		}
 		pthread_mutex_unlock(&mutex);
 		char buf[256]={'\0'};
 		int rc;
@@ -87,12 +80,33 @@ void *request_handler(void*args)
 			fp=popen(buf,"r");
 			//fscanf(fp,"%79[^ \n]%s",sendbuf);
 			fread(sendbuf,1,256,fp);
-			printf("sendbuf:%s\n",sendbuf);	
+			printf("sendbuf:%s\n",sendbuf);
+			//sleep(1);	
 			if(send(msg.event.data.fd, sendbuf, strlen(sendbuf), 0)<0)
 			{
-				perror("send");
-				exit(EXIT_FAILURE);
+				if(errno==EBADF)
+				{
+					printf("Bad file descriptor, connections timedout client closed abruptly\n");
+					if(epoll_ctl(pollfd,EPOLL_CTL_DEL,msg.event.data.fd,NULL)<0)
+					{	
+						perror("epoll_ctl");
+						exit(EXIT_FAILURE);
+					}
+					close(msg.event.data.fd);
+				}
+				else
+				{
+					perror("send");
+					exit(EXIT_FAILURE);
+				}
 			}
+			if(epoll_ctl(pollfd,EPOLL_CTL_DEL,msg.event.data.fd,NULL)<0)
+					{	
+						perror("epoll_ctl");
+						exit(EXIT_FAILURE);
+					}
+					close(msg.event.data.fd);
+
 		}
 	}	
 }
@@ -112,7 +126,10 @@ int add_event_to_q(int mqid,struct epoll_event *event)
 	struct msgbuf msg;
 	msg.mtype=1;
 	memcpy(&msg.event, event ,sizeof(struct epoll_event));
-	return msgsnd(mqid, &msg, sizeof(msg),0);	
+	if(msgsnd(mqid, &msg, sizeof(msg),0)<0)
+	return -1;
+	else
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -175,7 +192,7 @@ int main(int argc, char *argv[])
         puts("listening....");
 	
 	int mqid;
-	mqid=msgq_init("/home/mrunal/sockets/ARB123.txt");
+	mqid=msgq_init("/home/mrunal/sockets/data/ARB123.txt");
 	printf("mqid:%d\n",mqid);
 	if(mqid < 0)
 	{
@@ -245,10 +262,13 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+					pthread_mutex_lock(&mutex);
 					if(add_event_to_q(mqid, clev+i)<0)
 					{
 						perror("add_event_to_q");
 					}
+					pthread_cond_signal(&condition);
+					pthread_mutex_unlock(&mutex);
 					/*
 					char buf[256]={'\0'};
 					int rc;

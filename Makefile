@@ -28,5 +28,5 @@ $(BINDIR)/%: $(OBJDIR)/%.o
 	cc -g $(GCC_SANITIZE_FLAGS) $(LIB_FLAGS) $(DBG_FLAGS) -o $@ $^
 
 $(OBJDIR)/%.o: %.c
-	cc -g -MMD -c -o $@ $< $(GCC_SANITIZE_FLAGS) $(DBG_FLAGS)
+	cc -g -MMD -Iinclude -c -o $@ $< $(GCC_SANITIZE_FLAGS) $(DBG_FLAGS)
 -include $(OBJDIR)/*.d

@@ -1,13 +1,4 @@
-#include<sys/socket.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<pthread.h>
-#include<string.h>
-#include<sys/epoll.h>
-#include <arpa/inet.h>
-#include <getopt.h>
-#include<stdbool.h>
+#include"types.h"
 #define IP_ADDR 1
 #define PORT_NO 2
 #define MAX_EVENTS 100
